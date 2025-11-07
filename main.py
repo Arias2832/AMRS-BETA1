@@ -34,8 +34,8 @@ def download_data():
         df = connector.download_historical_data(
             symbol=config.SYMBOL,
             timeframe=config.TIMEFRAME,
-            start_date=config.START_DATE,
-            end_date=config.END_DATE
+            start_date=config.DATA_START_DATE,
+            end_date=config.DATA_END_DATE
         )
 
         if df is None:
@@ -89,6 +89,9 @@ def detect_setups(df, start_date, end_date):
         export_file = f"results/setups_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
         detector.export_to_csv(export_file)
 
+    # Generar resumen ejecutivo
+    detector.get_executive_summary(config.SYMBOL, start_date, end_date)
+
     return setups
 
 
@@ -133,16 +136,11 @@ def main():
     save_processed_data(df_processed)
 
     # PASO 3: Detectar setups
-    start_date = datetime(2025, 3, 1)
-    end_date = datetime(2025, 10, 17)
-
-    setups = detect_setups(df_processed, start_date, end_date)
+    setups = detect_setups(df_processed, config.ANALYSIS_START_DATE, config.ANALYSIS_END_DATE)
 
     print("\n" + "=" * 70)
     print("✅ PIPELINE COMPLETADO")
     print("=" * 70)
-    print(f"\n📊 Setups encontrados: {len(setups)}")
-    print(f"📅 Período: {start_date.date()} - {end_date.date()}")
 
 
 if __name__ == "__main__":

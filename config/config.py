@@ -6,36 +6,70 @@ Mean Reversion Strategy - H4 Timeframe
 from datetime import datetime
 import MetaTrader5 as mt5
 
-# MT5 Configuration
+# ============================================================================
+# 1. MT5 CONNECTION & DATA SOURCE
+# ============================================================================
 MT5_LOGIN = None  # None = usa cuenta por defecto ya logueada
 MT5_PASSWORD = ""
 MT5_SERVER = "FPMarkets-Demo"
 
-# Historical Data
 SYMBOL = "EURUSD"
 TIMEFRAME = mt5.TIMEFRAME_H4
-START_DATE = datetime(2019, 1, 1)
-END_DATE = datetime(2025, 10, 25)
 
-# Indicator Parameters
+# Fechas para descarga de datos (incluye warm-up de indicadores)
+DATA_START_DATE = datetime(2019, 1, 1)
+DATA_END_DATE = datetime(2025, 10, 25)
+
+# Fechas para análisis de setups (período de interés real)
+ANALYSIS_START_DATE = datetime(2020, 3, 1)
+ANALYSIS_END_DATE = datetime(2025, 10, 17)
+
+# ============================================================================
+# 2. TECHNICAL INDICATORS
+# ============================================================================
 EMA_PERIOD = 20
 ATR_PERIOD = 20
 ADX_PERIOD = 14
 RSI_PERIOD = 14
+
+# ATR Calibration (para alinear con MT5)
 ATR_ADJUSTMENT_FACTOR = 0.99
 
-# Strategy Parameters
-ATR_ENTRY_MULTIPLIER = 2.2
-ATR_STOP_MULTIPLIER = 3.0
-DI_THRESHOLD = 15
-RSI_OVERBOUGHT = 72
+# ============================================================================
+# 3. TRADING STRATEGY
+# ============================================================================
 
-# File Paths
+# ATR Levels
+ATR_ENTRY_MULTIPLIER = 2.2  # Nivel de entrada desde EMA
+ATR_STOP_MULTIPLIER = 3.0   # Nivel de stop loss desde EMA
+
+# Directional Indicators Filter
+DI_THRESHOLD = 15  # Diferencia mínima entre +DI y -DI
+
+# RSI Filter
+RSI_OVERBOUGHT = 72  # Nivel para permitir shorts contra +DI extremo
+
+# ============================================================================
+# 4. FILE MANAGEMENT
+# ============================================================================
 DATA_FOLDER = "Data"
 RESULTS_FOLDER = "results"
 LOGS_FOLDER = "logs"
-HISTORICAL_DATA_FILE = f"{DATA_FOLDER}/{SYMBOL}_H4_{START_DATE.year}-{END_DATE.year}.csv"
 
-# Logging
-LOG_LEVEL = "INFO"
+# Auto-generated paths
+HISTORICAL_DATA_FILE = f"{DATA_FOLDER}/{SYMBOL}_H4_{DATA_START_DATE.year}-{DATA_END_DATE.year}.csv"
+
+# ============================================================================
+# 5. LOGGING & DEBUG
+# ============================================================================
+LOG_LEVEL = "INFO"  # DEBUG, INFO, WARNING, ERROR
 LOG_FILE = f"{LOGS_FOLDER}/amrs_beta1.log"
+
+# ============================================================================
+# 6. EXPERIMENTAL FLAGS (Para futuras optimizaciones)
+# ============================================================================
+# TODO: Agregar flags de experimentación cuando se definan
+# Ejemplos:
+# CHECK_ENTRY_CANDLE_SLTP = False
+# ALLOW_SAME_CANDLE_CYCLE = True
+# USE_DYNAMIC_TP = False

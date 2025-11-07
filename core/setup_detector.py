@@ -240,13 +240,128 @@ class SetupDetector:
             print(f"  🎯 TP referencia:     {setup['tp_price_ref']} ({setup['tp_pips_estimated']} pips)")
             print(f"  💵 Precio salida:     {setup['exit_price'] if setup['exit_price'] else 'N/A'}")
             print(f"  📈 R:R estimado:      {setup['rr_ratio_estimated']}:1")
-            print(f"  📈 R:R real:          {setup['rr_ratio_real']}:1" if setup['rr_ratio_real'] else "  📈 R:R real:          N/A")
+            print(f"  📈 R:R real:          {setup['rr_ratio_real']}:1" if setup[
+                'rr_ratio_real'] else "  📈 R:R real:          N/A")
             print(f"  💵 Resultado:         {setup['result_pips']:+.1f} pips")
             print(f"  🕐 Velas alejadas:    {setup['candles_away']}")
             print(f"  🕐 Velas en trade:    {setup['candles_held']}")
             print(f"  📊 ADX:               {setup['adx']}")
             print(f"  📊 +DI / -DI:         {setup['plus_di']} / {setup['minus_di']}")
             print(f"  📊 RSI:               {setup['rsi']}")
+
+    def get_executive_summary(self, symbol, start_date, end_date):
+        """Genera resumen ejecutivo con métricas clave"""
+        if not self.setups:
+            print("\n❌ No hay setups para analizar")
+            return
+
+        # Calcular métricas básicas
+        total_trades = len(self.setups)
+        wins = [s for s in self.setups if s['outcome'] == 'WIN']
+        losses = [s for s in self.setups if s['outcome'] == 'LOSS']
+        open_trades = [s for s in self.setups if s['outcome'] == 'OPEN']
+
+        win_count = len(wins)
+        loss_count = len(losses)
+        closed_trades = win_count + loss_count
+
+        if closed_trades == 0:
+            print("\n⚠️ No hay trades cerrados para analizar")
+            return
+
+        # Win Rate
+        win_rate = (win_count / closed_trades) * 100
+
+        # Pips totales
+        total_pips = sum(s['result_pips'] for s in wins + losses)
+        win_pips_total = sum(s['result_pips'] for s in wins)
+        loss_pips_total = sum(s['result_pips'] for s in losses)
+
+        # Promedios
+        avg_win_pips = win_pips_total / win_count if win_count > 0 else 0
+        avg_loss_pips = abs(loss_pips_total) / loss_count if loss_count > 0 else 0
+
+        # Esperanza matemática - Método 1 (directo)
+        expectativa_directa = total_pips / closed_trades
+
+        # Esperanza matemática - Método 2 (probabilístico)
+        win_prob = win_count / closed_trades
+        loss_prob = loss_count / closed_trades
+        expectativa_probabilistica = (win_prob * avg_win_pips) - (loss_prob * avg_loss_pips)
+
+        # Promedio de ambos métodos
+        expectativa_promedio = (expectativa_directa + expectativa_probabilistica) / 2
+
+        # Profit Factor
+        profit_factor = win_pips_total / abs(loss_pips_total) if loss_pips_total != 0 else float('inf')
+
+        # Max Drawdown (aproximado - mayor pérdida individual)
+        max_drawdown = min(s['result_pips'] for s in losses) if losses else 0
+
+        # Trades por año
+        years = (end_date - start_date).days / 365.25
+        trades_per_year = closed_trades / years if years > 0 else 0
+
+        # Expectativa anual
+        expectativa_anual = expectativa_promedio * trades_per_year
+
+        # Veredicto
+        if expectativa_promedio > 15 and profit_factor > 2.5 and win_rate > 65:
+            veredicto = "✅ EXCELENTE"
+        elif expectativa_promedio > 8 and profit_factor > 1.8 and win_rate > 55:
+            veredicto = "🟡 PROMETEDORA"
+        elif expectativa_promedio > 3 and profit_factor > 1.3:
+            veredicto = "⚠️ MARGINAL"
+        else:
+            veredicto = "❌ DESCARTADA"
+
+        # Mostrar resumen
+        period_str = f"{start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}"
+        years_str = f"{years:.1f} años" if years >= 1 else f"{years * 12:.1f} meses"
+
+        print("\n" + "=" * 70)
+        print(f"📈 RESUMEN EJECUTIVO - {symbol} ({years_str})")
+        print("=" * 70)
+        print(f"💰 Pips Netos: {total_pips:+.0f} pips")
+        print(f"✅ Win Rate: {win_rate:.0f}% ({win_count}W | {loss_count}L)")
+        if open_trades:
+            print(f"⏳ Trades abiertos: {len(open_trades)}")
+        print(f"📊 Trades promedio: {trades_per_year:.0f}/año ({closed_trades} total)")
+
+        print(f"\n🧮 ESPERANZA MATEMÁTICA:")
+        print(f"   📍 Método directo: {expectativa_directa:+.2f} pips/trade ({total_pips:.0f} ÷ {closed_trades})")
+        print(f"   📍 Método probabilístico: {expectativa_probabilistica:+.2f} pips/trade*")
+        print(f"   🎯 Promedio: {expectativa_promedio:+.2f} pips/trade")
+
+        print(f"\n📈 BREAKDOWN POR TIPO:")
+        print(f"   🟢 Avg Win: +{avg_win_pips:.1f} pips/trade ganador")
+        print(f"   🔴 Avg Loss: -{avg_loss_pips:.1f} pips/trade perdedor")
+
+        print(f"\n📊 MÉTRICAS CLAVE:")
+        print(f"   💪 Profit Factor: {profit_factor:.2f}")
+        print(f"   ⚠️ Max Drawdown: {max_drawdown:+.0f} pips")
+        print(
+            f"   📈 Expectativa anual: {expectativa_anual:+.0f} pips ({expectativa_promedio:+.1f} × {trades_per_year:.0f})")
+
+        print(f"\n🚦 VEREDICTO: {veredicto}")
+        if veredicto == "✅ EXCELENTE":
+            print("   ✅ Expectativa excelente (>+15 pips)")
+            print("   ✅ Profit factor sólido (>2.5)")
+            print("   ✅ Win rate alto (>65%)")
+        elif veredicto == "🟡 PROMETEDORA":
+            print("   ✅ Expectativa positiva sólida")
+            print("   ✅ Métricas balanceadas")
+            print("   🎯 Vale la pena optimizar")
+        elif veredicto == "⚠️ MARGINAL":
+            print("   ⚠️ Expectativa baja pero positiva")
+            print("   🔧 Requiere optimización")
+        else:
+            print("   ❌ Expectativa negativa o muy baja")
+            print("   🚫 No recomendada sin cambios mayores")
+
+        print(
+            f"\n*Cálculo: ({win_rate:.0f}% × {avg_win_pips:.1f}) - ({100 - win_rate:.0f}% × {avg_loss_pips:.1f}) = {expectativa_probabilistica:+.2f}")
+        print("=" * 70)
 
     def export_to_csv(self, filename):
         """Exporta setups a CSV para análisis"""
