@@ -10,8 +10,10 @@ import numpy as np
 class SetupDetector:
     """Detector de setups de trading según reglas de la estrategia"""
 
-    def __init__(self, min_candles_away=0):
+    def __init__(self, min_candles_away=0, use_di_filter=False, di_spread_max=20):
         self.min_candles_away = min_candles_away
+        self.use_di_filter = use_di_filter
+        self.di_spread_max = di_spread_max
         self.setups = []
 
     def detect_ema_touches(self, df):
@@ -32,6 +34,14 @@ class SetupDetector:
 
         return True, candles_away
 
+    def check_di_spread_filter(self, candle):
+        """Verifica si el filtro DI spread pasa para la vela dada"""
+        if not self.use_di_filter:
+            return True
+
+        di_spread = abs(candle['plus_di'] - candle['minus_di'])
+        return di_spread < self.di_spread_max
+
     def detect_entry_at_atr_level(self, df, touch_idx, direction):
         """Detecta entrada en nivel ATR sin volver a tocar EMA"""
         start_idx = touch_idx + self.min_candles_away
@@ -44,6 +54,10 @@ class SetupDetector:
             # Verificar si NO volvió a tocar EMA
             if current_candle['low'] <= current_candle['ema20'] <= current_candle['high']:
                 return False, None
+
+            # Aplicar filtro DI spread si está habilitado
+            if not self.check_di_spread_filter(current_candle):
+                continue  # Saltar esta vela, no cumple filtro DI
 
             # Verificar entrada en nivel ATR
             if direction == 'LONG':

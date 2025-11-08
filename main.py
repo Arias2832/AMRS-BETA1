@@ -2,7 +2,7 @@
 Script principal: Descarga + Indicadores + Detección de Setups
 AMRS BETA1 - Mean Reversion Strategy
 """
-
+import MetaTrader5 as mt5
 import sys
 sys.path.append('.')
 
@@ -75,7 +75,15 @@ def detect_setups(df, start_date, end_date):
     print("PASO 3: DETECCIÓN DE SETUPS")
     print("=" * 70)
 
-    detector = SetupDetector(min_candles_away=0)
+    detector = SetupDetector(
+        min_candles_away=0,
+        use_di_filter=config.USE_DI_SPREAD_FILTER,
+        di_spread_max=config.DI_SPREAD_MAX
+    )
+
+    # Mostrar configuración de filtros si están activos
+    if config.USE_DI_SPREAD_FILTER:
+        print(f"🔧 Filtro DI activado: |+DI - -DI| < {config.DI_SPREAD_MAX}")
 
     setups = detector.detect_all_setups(
         df,
@@ -84,9 +92,18 @@ def detect_setups(df, start_date, end_date):
     )
 
     detector.print_setups()
-
+    # Obtener nombre de timeframe
+    timeframe_map = {
+        mt5.TIMEFRAME_H1: "H1",
+        mt5.TIMEFRAME_H4: "H4",
+        mt5.TIMEFRAME_H6: "H6",
+        mt5.TIMEFRAME_M30: "M30",
+        mt5.TIMEFRAME_D1: "D1"
+    }
+    timeframe_name = timeframe_map.get(config.TIMEFRAME, "H4")
+    # Exportar a CSV
     if setups:
-        export_file = f"results/setups_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+        export_file = f"results/setups_{config.SYMBOL}_{timeframe_name}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
         detector.export_to_csv(export_file)
 
     # Generar resumen ejecutivo

@@ -13,7 +13,7 @@ MT5_LOGIN = None  # None = usa cuenta por defecto ya logueada
 MT5_PASSWORD = ""
 MT5_SERVER = "FPMarkets-Demo"
 
-SYMBOL = "EURUSD"
+SYMBOL = "USDJPY"
 TIMEFRAME = mt5.TIMEFRAME_H4
 
 # Fechas para descarga de datos (incluye warm-up de indicadores)
@@ -21,7 +21,7 @@ DATA_START_DATE = datetime(2019, 1, 1)
 DATA_END_DATE = datetime(2025, 10, 25)
 
 # Fechas para análisis de setups (período de interés real)
-ANALYSIS_START_DATE = datetime(2020, 3, 1)
+ANALYSIS_START_DATE = datetime(2019, 1, 1)    # ¿Es 2020?
 ANALYSIS_END_DATE = datetime(2025, 10, 17)
 
 # ============================================================================
@@ -40,11 +40,13 @@ ATR_ADJUSTMENT_FACTOR = 0.99
 # ============================================================================
 
 # ATR Levels
-ATR_ENTRY_MULTIPLIER = 2.2  # Nivel de entrada desde EMA
+ATR_ENTRY_MULTIPLIER = 2.3  # Nivel de entrada desde EMA
 ATR_STOP_MULTIPLIER = 3.0   # Nivel de stop loss desde EMA
 
 # Directional Indicators Filter
-DI_THRESHOLD = 15  # Diferencia mínima entre +DI y -DI
+DI_THRESHOLD = 15           # Diferencia mínima entre +DI y -DI (legacy)
+USE_DI_SPREAD_FILTER = False # Activar/desactivar filtro DI spread
+DI_SPREAD_MAX = 18          # Máximo spread |+DI - -DI| permitido
 
 # RSI Filter
 RSI_OVERBOUGHT = 72  # Nivel para permitir shorts contra +DI extremo
