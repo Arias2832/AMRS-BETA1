@@ -76,6 +76,7 @@ def detect_setups(df, start_date, end_date):
     print("=" * 70)
 
     detector = SetupDetector(
+        symbol=config.SYMBOL,  # ← AGREGAR ESTA LÍNEA
         min_candles_away=0,
         use_di_filter=config.USE_DI_SPREAD_FILTER,
         di_spread_max=config.DI_SPREAD_MAX

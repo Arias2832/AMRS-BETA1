@@ -1,6 +1,6 @@
 """
 Detector de setups para estrategia Mean Reversion
-AMRS BETA1
+AMRS BETA1 - CORREGIDO PARA FACTOR PIPS AUTOMÁTICO
 """
 
 import pandas as pd
@@ -10,11 +10,43 @@ import numpy as np
 class SetupDetector:
     """Detector de setups de trading según reglas de la estrategia"""
 
-    def __init__(self, min_candles_away=0, use_di_filter=False, di_spread_max=20):
+    def __init__(self, symbol, min_candles_away=0, use_di_filter=False, di_spread_max=20):
+        """
+        Inicializa el detector con detección automática de factor de pips
+
+        Args:
+            symbol: Par de divisas (para determinar factor de pips automáticamente)
+            min_candles_away: Mínimo de velas alejadas de EMA después del toque
+            use_di_filter: Activar filtro DI spread
+            di_spread_max: Máximo spread |+DI - -DI| permitido
+        """
+
+        def get_pip_factor(symbol):
+            """Obtiene el factor para convertir diferencia de precios a pips"""
+            two_decimal_pairs = ["USDJPY", "EURJPY", "GBPJPY", "AUDJPY", "CHFJPY", "CADJPY", "NZDJPY"]
+            return 100 if symbol.upper() in two_decimal_pairs else 10000
+
+        def get_symbol_info(symbol):
+            """Obtiene información completa del símbolo"""
+            pip_factor = get_pip_factor(symbol)
+            if pip_factor == 100:
+                return {'pip_factor': pip_factor, 'decimals': 2, 'description': "JPY pair (2 decimals)"}
+            else:
+                return {'pip_factor': pip_factor, 'decimals': 4, 'description': "Major pair (4 decimals)"}
+        self.symbol = symbol.upper()
         self.min_candles_away = min_candles_away
         self.use_di_filter = use_di_filter
         self.di_spread_max = di_spread_max
         self.setups = []
+
+        # Obtener factor de pips automáticamente
+        self.pip_factor = get_pip_factor(symbol)
+        self.symbol_info = get_symbol_info(symbol)
+
+        print(f"\n📊 CONFIGURACIÓN AUTOMÁTICA PARA {self.symbol}:")
+        print(f"   📍 Tipo: {self.symbol_info['description']}")
+        print(f"   🔢 Decimales: {self.symbol_info['decimals']}")
+        print(f"   🧮 Factor pips: {self.pip_factor}")
 
     def detect_ema_touches(self, df):
         """Detecta velas donde el precio toca la EMA20"""
@@ -70,7 +102,7 @@ class SetupDetector:
         return False, None
 
     def simulate_trade_outcome(self, df, entry_idx, direction, entry_price, sl_price, tp_ema_ref):
-        """Simula el resultado del trade hacia adelante"""
+        """Simula el resultado del trade hacia adelante - CORREGIDO FACTOR PIPS"""
         for i in range(entry_idx, len(df)):
             candle = df.iloc[i]
 
@@ -81,7 +113,7 @@ class SetupDetector:
                         'outcome': 'LOSS',
                         'exit_date': candle['datetime'],
                         'exit_price': sl_price,
-                        'pips': round((sl_price - entry_price) * 10000, 1),
+                        'pips': round((sl_price - entry_price) * self.pip_factor, 1),  # CORREGIDO
                         'candles_held': i - entry_idx
                     }
                 # Take Profit (toca EMA20)
@@ -90,7 +122,7 @@ class SetupDetector:
                         'outcome': 'WIN',
                         'exit_date': candle['datetime'],
                         'exit_price': candle['ema20'],
-                        'pips': round((candle['ema20'] - entry_price) * 10000, 1),
+                        'pips': round((candle['ema20'] - entry_price) * self.pip_factor, 1),  # CORREGIDO
                         'candles_held': i - entry_idx
                     }
 
@@ -101,7 +133,7 @@ class SetupDetector:
                         'outcome': 'LOSS',
                         'exit_date': candle['datetime'],
                         'exit_price': sl_price,
-                        'pips': round((entry_price - sl_price) * 10000, 1),
+                        'pips': round((entry_price - sl_price) * self.pip_factor, 1),  # CORREGIDO
                         'candles_held': i - entry_idx
                     }
                 # Take Profit (toca EMA20)
@@ -110,7 +142,7 @@ class SetupDetector:
                         'outcome': 'WIN',
                         'exit_date': candle['datetime'],
                         'exit_price': candle['ema20'],
-                        'pips': round((entry_price - candle['ema20']) * 10000, 1),
+                        'pips': round((entry_price - candle['ema20']) * self.pip_factor, 1),  # CORREGIDO
                         'candles_held': i - entry_idx
                     }
 
@@ -124,7 +156,7 @@ class SetupDetector:
         }
 
     def create_setup(self, df, touch_idx, entry_idx, direction):
-        """Crea un setup con toda la información necesaria"""
+        """Crea un setup con toda la información necesaria - CORREGIDO FACTOR PIPS"""
         entry_candle = df.iloc[entry_idx]
         touch_candle = df.iloc[touch_idx]
 
@@ -146,7 +178,7 @@ class SetupDetector:
         )
 
         if trade_result['outcome'] in ['WIN', 'LOSS']:
-            rr_ratio_real = abs(trade_result['pips']) / (sl_distance * 10000)
+            rr_ratio_real = abs(trade_result['pips']) / (sl_distance * self.pip_factor)  # CORREGIDO
         else:
             rr_ratio_real = None
 
@@ -159,8 +191,8 @@ class SetupDetector:
             'sl_price': round(sl_price, 5),
             'tp_price_ref': round(tp_price_ref, 5),
             'exit_price': round(trade_result['exit_price'], 5) if trade_result['exit_price'] else None,
-            'sl_pips': round(sl_distance * 10000, 1),
-            'tp_pips_estimated': round(tp_distance_estimated * 10000, 1),
+            'sl_pips': round(sl_distance * self.pip_factor, 1),  # CORREGIDO
+            'tp_pips_estimated': round(tp_distance_estimated * self.pip_factor, 1),  # CORREGIDO
             'result_pips': trade_result['pips'],
             'rr_ratio_estimated': round(rr_ratio_estimated, 2),
             'rr_ratio_real': round(rr_ratio_real, 2) if rr_ratio_real else None,
@@ -178,7 +210,8 @@ class SetupDetector:
 
     def detect_all_setups(self, df, start_date=None, end_date=None):
         """Detecta todos los setups válidos en el DataFrame"""
-        print("\n🔍 Detectando setups...")
+        print(f"\n🔍 Detectando setups para {self.symbol}...")
+        print(f"📊 Usando factor de pips: {self.pip_factor} ({self.symbol_info['description']})")
 
         df = df.reset_index(drop=True)
         df_full = df.copy()
@@ -232,7 +265,8 @@ class SetupDetector:
             return
 
         print("\n" + "=" * 70)
-        print(f"SETUPS ENCONTRADOS: {len(self.setups)}")
+        print(f"SETUPS ENCONTRADOS PARA {self.symbol}: {len(self.setups)}")
+        print(f"Factor de pips usado: {self.pip_factor} ({self.symbol_info['description']})")
         print("=" * 70)
 
         wins = sum(1 for s in self.setups if s['outcome'] == 'WIN')
